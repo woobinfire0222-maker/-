@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "돼홍존위"
+description = "Supabase를 기반으로 인증, 공지, 실시간 단체 채팅, 긴급회의, 알림, 코인 관리와 관리자 기능을 제공하는 한국어 위원회형 커뮤니티 웹앱"
+version = "1.0.0"
+id = "artifacts/dohongjonwi"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21522
+
+[services.development]
+run = "pnpm --filter @workspace/dohongjonwi run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/dohongjonwi", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/dohongjonwi/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21522"
+BASE_PATH = "/"
