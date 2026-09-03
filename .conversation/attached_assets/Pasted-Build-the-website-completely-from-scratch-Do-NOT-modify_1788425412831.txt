@@ -1,0 +1,602 @@
+Build the **돼홍존위** website completely from scratch.
+
+Do NOT modify, reuse, preserve, or redesign the existing project. The current project is considered broken and should be treated as if it does not exist.
+
+Create a new, clean, production-ready web application with a real Supabase backend.
+
+## Core Requirements
+
+The application will be deployed on GitHub Pages as a static frontend, while Supabase will handle the backend.
+
+Use:
+
+* React
+* TypeScript
+* Vite
+* Supabase JavaScript SDK
+* Supabase Auth
+* Supabase PostgreSQL
+* Supabase Realtime
+
+Do not create a separate backend server.
+
+Do not use mock data for core functionality.
+
+Do not use localStorage as a database.
+
+All important persistent data must be stored in Supabase.
+
+---
+
+# 1. First Screen
+
+When a user first enters the website, show a very simple search page.
+
+The design should resemble a normal Google-style search page.
+
+Requirements:
+
+* White background
+* Simple Korean sans-serif font
+* Centered search box
+* Search button
+* Minimal UI
+* No handwritten fonts
+* No serif fonts
+* No grid background
+* No emotional landing-page design
+* No huge slogans
+* No decorative phrases
+* No unnecessary cards
+* No excessive animations
+
+The page should look like a normal search page rather than a promotional landing page.
+
+## Search behavior
+
+If and only if the exact search input is:
+
+`홍연우 못생김`
+
+navigate to the 돼홍존위 main website.
+
+For every other search query, do NOT create fake search results.
+
+Redirect the user to the real Google search page:
+
+`https://www.google.com/search?q={encoded_query}`
+
+Properly URL-encode the search query.
+
+Do not imitate or embed Google's search results inside the application.
+
+---
+
+# 2. 돼홍존위 Website
+
+After passing the search condition, display the 돼홍존위 website.
+
+The website should have a clean, organized administrative-committee style.
+
+It may feel like a formal committee website, but it must NOT impersonate an actual government organization.
+
+Do not use:
+
+* Real government logos
+* Real government organization names
+* Government seals
+* Real government branding
+
+Use only the fictional organization name:
+
+**돼홍존위**
+
+The design should prioritize readability and information over decoration.
+
+Use:
+
+* Pretendard
+* Noto Sans KR
+* Or system Korean sans-serif fonts
+
+Avoid handwritten or serif fonts completely.
+
+---
+
+# 3. Main Navigation
+
+Create a clear header/navigation system.
+
+Main sections:
+
+* 홈
+* 공지사항
+* 단체 채팅
+* 긴급회의
+* 알림
+* 회원 정보
+* 관리자
+
+Show the 관리자 menu only to users whose Supabase role is `admin`.
+
+Do NOT determine administrator status by comparing usernames or names in frontend code.
+
+Never do something like:
+
+`if (user.name === "김강연")`
+
+Administrator authorization must come from the user's role stored in Supabase and enforced with RLS.
+
+---
+
+# 4. Authentication
+
+Use Supabase Auth.
+
+Implement:
+
+* 회원가입
+* 로그인
+* 로그아웃
+* Session persistence
+* Authentication state handling
+
+After registration, create the corresponding user profile in the database.
+
+Create a proper database structure for user profiles.
+
+Suggested fields:
+
+* id
+* email
+* display_name
+* role
+* coin_balance
+* created_at
+* updated_at
+
+Use the authenticated Supabase user's UUID as the primary user identifier.
+
+---
+
+# 5. User Profile
+
+Create a 회원 정보 page.
+
+Display:
+
+* 이름
+* 이메일
+* 가입일
+* 보유 코인
+* 계정 권한
+
+Users should only be able to access and modify data that they are authorized to access.
+
+Use RLS to enforce this.
+
+---
+
+# 6. Coin System
+
+Create a real coin system backed by Supabase PostgreSQL.
+
+The current balance must be stored in the database.
+
+Do not use localStorage for coin balances.
+
+Create a transaction/history table.
+
+Every coin modification must create a history record.
+
+Record:
+
+* target user
+* previous balance
+* amount changed
+* new balance
+* type: add/remove
+* reason
+* administrator who made the change
+* timestamp
+
+Use database-safe operations so that concurrent changes cannot corrupt the balance.
+
+---
+
+# 7. Announcements
+
+Create a notice/announcement system.
+
+Members can:
+
+* View announcements
+* Open individual announcements
+
+Admins can:
+
+* Create announcements
+* Edit announcements
+* Delete announcements
+
+Store all announcements in Supabase.
+
+Suggested fields:
+
+* id
+* title
+* content
+* author_id
+* created_at
+* updated_at
+
+---
+
+# 8. Group Chat
+
+Create a real-time group chat.
+
+This is extremely important.
+
+Messages must NOT be stored only in browser memory.
+
+Every chat message must be permanently stored in Supabase PostgreSQL.
+
+Use Supabase Realtime so that messages appear immediately for other connected users.
+
+Suggested message fields:
+
+* id
+* room_id
+* sender_id
+* content
+* created_at
+
+When a user opens the chat:
+
+1. Load previous messages from Supabase.
+2. Display the chat history.
+3. Subscribe to Supabase Realtime.
+4. Display new messages immediately.
+5. Save every new message to Supabase.
+
+Refreshing the page must NOT erase chat history.
+
+A user who joins later should still be able to see previous messages according to the configured access rules.
+
+Do not implement fake client-only chat.
+
+---
+
+# 9. Emergency Meetings
+
+Create an emergency meeting system.
+
+Admins can:
+
+* Create a meeting
+* Set title
+* Set description
+* Start a meeting
+* End a meeting
+
+Members can see currently active meetings.
+
+Store meetings in Supabase.
+
+Suggested fields:
+
+* id
+* title
+* description
+* created_by
+* status
+* created_at
+* started_at
+* ended_at
+
+Use Supabase Realtime so that active meeting status updates appear without manually refreshing the page.
+
+---
+
+# 10. Notifications
+
+Create a notification system backed by Supabase.
+
+Notifications can be generated for events such as:
+
+* New announcement
+* Emergency meeting started
+* Emergency meeting ended
+* Administrator announcements
+* Important system events
+
+Store notifications in Supabase.
+
+Users should be able to:
+
+* View notifications
+* Mark notifications as read
+* See unread notification count
+
+Use Supabase Realtime where appropriate for immediate notification updates.
+
+---
+
+# 11. Admin Dashboard
+
+Create a dedicated admin dashboard.
+
+Initial administrators are:
+
+* 김강연
+* 권라엘
+* 윤한결
+
+IMPORTANT:
+
+These names are only the initial administrator identities.
+
+Do not hard-code administrator authorization based on these names.
+
+Instead, provide a Supabase database setup/migration that assigns the correct `role = 'admin'` to the appropriate user accounts after they exist.
+
+The frontend must check the authenticated user's role from the database.
+
+Admins can:
+
+### User management
+
+* View members
+* View member information
+* Manage member status
+* Manage roles where authorized
+
+### Announcement management
+
+* Create
+* Edit
+* Delete
+
+### Emergency meetings
+
+* Create
+* Start
+* End
+
+### Notifications
+
+* Send notifications to all users
+
+### Coin management
+
+* Add coins to a member
+* Remove coins from a member
+* Enter a reason
+
+Every administrative action involving coins must create an immutable transaction/history record.
+
+---
+
+# 12. Admin Audit Logs
+
+Create an admin action log.
+
+Record important administrative actions.
+
+Suggested fields:
+
+* id
+* admin_id
+* action_type
+* target_user_id
+* description
+* created_at
+
+Examples:
+
+* Coin added
+* Coin removed
+* User role changed
+* Announcement created
+* Announcement deleted
+* Emergency meeting created
+* Emergency meeting ended
+* Global notification sent
+
+Admins should be able to view these logs.
+
+---
+
+# 13. Supabase Database
+
+Create the SQL schema needed for the entire application.
+
+Provide a complete SQL migration file such as:
+
+`supabase/schema.sql`
+
+The schema should include appropriate tables for:
+
+* profiles
+* announcements
+* chat_rooms
+* chat_messages
+* emergency_meetings
+* notifications
+* coin_transactions
+* admin_logs
+
+Add:
+
+* Primary keys
+* Foreign keys
+* Timestamps
+* Appropriate indexes
+* Constraints
+* Required relationships
+
+Use UUIDs where appropriate.
+
+---
+
+# 14. Row Level Security
+
+RLS is mandatory.
+
+Enable RLS on all sensitive tables.
+
+Examples:
+
+Normal users:
+
+* Can read their own profile
+* Can update permitted profile fields
+* Can read announcements
+* Can read permitted chat messages
+* Can create chat messages as themselves
+* Can read their own notifications
+* Can mark their own notifications as read
+* Can read permitted meetings
+
+Admins:
+
+* Can manage announcements
+* Can manage meetings
+* Can manage notifications
+* Can manage users where permitted
+* Can modify coins through secure database operations
+* Can view administrative logs
+
+Do not rely on frontend JavaScript to enforce permissions.
+
+RLS must provide the actual database-level security.
+
+---
+
+# 15. Security
+
+Never put a Supabase `service_role` key into frontend code.
+
+Never commit a `service_role` key to GitHub.
+
+Use only the public Supabase client configuration required by the browser.
+
+Use environment variables such as:
+
+`VITE_SUPABASE_URL`
+
+`VITE_SUPABASE_ANON_KEY`
+
+Provide a `.env.example` file showing the required variables without exposing real credentials.
+
+---
+
+# 16. Error Handling
+
+Implement proper loading and error states.
+
+Examples:
+
+* Authentication failure
+* Database failure
+* Realtime connection failure
+* Failed message send
+* Failed coin update
+* Unauthorized access
+* Missing profile
+* Empty announcement list
+* Empty chat history
+
+Do not silently ignore errors.
+
+Show clear Korean messages to users.
+
+---
+
+# 17. Responsive Design
+
+The website must work naturally on:
+
+* Desktop
+* Laptop
+* Tablet
+* Mobile
+
+The search page should feel natural on both PC and mobile.
+
+The 돼홍존위 site should use responsive navigation and layouts.
+
+Do not simply shrink the desktop UI.
+
+---
+
+# 18. Project Structure
+
+Keep the project organized.
+
+Use a structure similar to:
+
+src/
+
+* components/
+* pages/
+* layouts/
+* hooks/
+* lib/
+* types/
+* services/
+
+Create a dedicated Supabase client module.
+
+Keep database operations separate from UI components where practical.
+
+Use TypeScript types for database entities.
+
+---
+
+# 19. Initial Setup Instructions
+
+Create:
+
+* `supabase/schema.sql`
+* `.env.example`
+* Supabase client configuration
+* Complete frontend implementation
+* Authentication flow
+* RLS policies
+* Realtime subscriptions
+* Database queries
+* Admin dashboard
+
+Also provide a clear README explaining:
+
+1. How to create a Supabase project
+2. Where to run `supabase/schema.sql`
+3. How to configure environment variables
+4. How to create the initial admin accounts
+5. How to deploy the frontend to GitHub Pages
+
+---
+
+# 20. Most Important Requirement
+
+Do not produce a fake prototype.
+
+The application should actually use Supabase.
+
+Do not make fake login systems.
+
+Do not make fake coin balances.
+
+Do not make fake chat history.
+
+Do not make fake notifications.
+
+Do not store important application data in localStorage.
+
+Do not use hard-coded administrator names for authorization.
+
+Build the database schema, authentication, RLS policies, Realtime subscriptions, and frontend together so the application works as a real Supabase-backed service.
+
+The project should start from a completely clean implementation rather than attempting to repair the existing broken design or code.
