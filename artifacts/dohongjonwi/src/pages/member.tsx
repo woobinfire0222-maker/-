@@ -1,4 +1,4 @@
-import { Bell, CheckCheck, ChevronRight, Clock3, Coins, FileText, MessageCircle, MoreHorizontal, Pencil, Plus, Radio, RefreshCw, Send, ShieldAlert, Siren, Users, X } from 'lucide-react';
+import { Bell, CheckCheck, ChevronRight, Clock3, Coins, FileText, MessageCircle, MoreHorizontal, Pencil, Plus, Radio, RefreshCw, Send, ShieldAlert, Siren, TrendingUp, Users, X } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { AppShell } from '@/components/app-shell';
@@ -16,7 +16,7 @@ export function MemberApp() {
   if (loading) return <div className="min-h-[100dvh] bg-background p-6 lg:pl-[296px]"><div className="mx-auto max-w-5xl pt-12"><Skeleton className="h-8 w-52" /><Skeleton className="mt-8 h-64 w-full" /></div></div>;
   if (error || !profile) return <div className="flex min-h-[100dvh] items-center justify-center p-6"><Card className="max-w-md p-8 text-center"><ShieldAlert className="mx-auto mb-4 text-destructive" /><h2 className="font-bold">접속할 수 없습니다</h2><p className="mt-2 text-sm text-muted-foreground">회원 정보를 확인하는 중 문제가 생겼습니다.</p><Button onClick={load} className="mt-5" data-testid="button-profile-retry">다시 시도</Button></Card></div>;
   const view = params.section ?? location.split('/')[2];
-  return <AppShell profile={profile}>{view === 'notices' ? <NoticesView profile={profile} /> : view === 'chat' ? <ChatView profile={profile} /> : view === 'meetings' ? <MeetingsView profile={profile} /> : view === 'notifications' ? <NotificationsView profile={profile} /> : view === 'profile' ? <ProfileView profile={profile} onUpdate={setProfile} /> : <DashboardView profile={profile} />}</AppShell>;
+  return <AppShell profile={profile}>{view === 'notices' ? <NoticesView profile={profile} /> : view === 'chat' ? <ChatView profile={profile} /> : view === 'meetings' ? <MeetingsView profile={profile} /> : view === 'stocks' ? <StocksView profile={profile} /> : view === 'notifications' ? <NotificationsView profile={profile} /> : view === 'profile' ? <ProfileView profile={profile} onUpdate={setProfile} /> : <DashboardView profile={profile} />}</AppShell>;
 }
 
 function DashboardView({ profile }: { profile: Profile }) {
@@ -34,6 +34,26 @@ function DashboardView({ profile }: { profile: Profile }) {
 }
 function UserIcon() { return <Users size={19} />; }
 function QuickLink({ href, icon, label, color }: { href: string; icon: ReactNode; label: string; color: 'blue' | 'amber' | 'green' | 'gray' }) { const tone = { blue: 'bg-primary/10 text-primary', amber: 'bg-accent/20 text-accent-foreground', green: 'bg-emerald-100 text-emerald-800', gray: 'bg-muted text-muted-foreground' }; return <Link href={href} className="flex items-center gap-3 rounded-lg border p-3 text-sm font-bold transition hover:-translate-y-0.5 hover:shadow-sm" data-testid={`link-quick-${label}`}><span className={`flex h-9 w-9 items-center justify-center rounded-lg ${tone[color]}`}>{icon}</span>{label}</Link>; }
+
+function StocksView({ profile }: { profile: Profile }) {
+  return <div className="mx-auto max-w-5xl">
+    <PageTitle eyebrow="COMING SOON" title="주식" description="코인으로 이용할 수 있는 주식 기능을 준비하고 있습니다." />
+    <Card className="relative overflow-hidden border-primary/15 p-6 sm:p-8">
+      <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full border-[24px] border-primary/5" />
+      <div className="relative">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary"><TrendingUp size={23} /></div>
+        <div className="mt-6"><Badge tone="amber">준비 중</Badge></div>
+        <h2 className="mt-4 text-2xl font-extrabold tracking-[-.05em]">코인으로 주식에 참여하는 기능을 준비 중이에요.</h2>
+        <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">현재는 안내만 제공하며, 주식 조회·주문·거래·교환 기능은 아직 사용할 수 없습니다. 준비가 완료되면 별도 공지로 알려드릴게요.</p>
+        <div className="mt-7 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border bg-background/70 p-4"><p className="text-xs text-muted-foreground">현재 보유 코인</p><strong className="mono mt-2 block text-xl">{profile.coin_balance.toLocaleString()} <span className="text-xs text-muted-foreground">COIN</span></strong></div>
+          <div className="rounded-xl border bg-muted/40 p-4"><p className="text-xs text-muted-foreground">이용 상태</p><strong className="mt-2 block text-sm">거래 기능 잠김</strong></div>
+        </div>
+        <Button type="button" className="mt-7" disabled data-testid="button-stocks-coming-soon"><TrendingUp size={16} />거래 기능 준비 중</Button>
+      </div>
+    </Card>
+  </div>;
+}
 
 function NoticesView({ profile }: { profile: Profile }) {
   const [items, setItems] = useState<Announcement[] | null>(null); const [error, setError] = useState(false); const [composer, setComposer] = useState(false); const [title, setTitle] = useState(''); const [content, setContent] = useState(''); const [saving, setSaving] = useState(false);

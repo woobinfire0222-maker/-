@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'wouter';
-import { Bell, ChevronDown, Coins, FileText, Home, LogOut, Menu, MessageCircle, Settings, ShieldCheck, Siren, UserRound, X } from 'lucide-react';
+import { Bell, ChevronDown, Coins, FileText, Home, LogOut, Menu, MessageCircle, Settings, ShieldCheck, Siren, TrendingUp, UserRound, X } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { getNotifications, signOut, subscribeToTable, type Profile } from '@/lib/data-services';
 
@@ -8,6 +8,7 @@ const navItems = [
   { href: '/app/notices', label: '공지사항', icon: FileText },
   { href: '/app/chat', label: '단체 채팅', icon: MessageCircle },
   { href: '/app/meetings', label: '긴급회의', icon: Siren },
+  { href: '/app/stocks', label: '주식', icon: TrendingUp },
   { href: '/app/notifications', label: '알림', icon: Bell },
   { href: '/app/profile', label: '회원 정보', icon: UserRound },
 ];

@@ -21,6 +21,7 @@ function Router() {
     <Route path="/app/notices" component={MemberApp} />
     <Route path="/app/chat" component={MemberApp} />
     <Route path="/app/meetings" component={MemberApp} />
+    <Route path="/app/stocks" component={MemberApp} />
     <Route path="/app/notifications" component={MemberApp} />
     <Route path="/app/profile" component={MemberApp} />
     <Route path="/notice/:id" component={NoticeDetailPage} />
