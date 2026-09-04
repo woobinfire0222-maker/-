@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useLocation } from 'wouter';
 import { AuthFrame } from '@/components/app-shell';
 import { Button, Field, Input } from '@/components/ui-kit';
-import { resetPassword, signIn, signUp } from '@/lib/data-services';
+import { DEPARTMENT_LABELS, resetPassword, signIn, signUp, type Department } from '@/lib/data-services';
 
 export function LoginPage() {
   const [, setLocation] = useLocation(); const [show, setShow] = useState(false); const [loading, setLoading] = useState(false); const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [error, setError] = useState(''); const [message, setMessage] = useState('');
@@ -21,12 +21,13 @@ export function LoginPage() {
 }
 
 export function SignupPage() {
-  const [, setLocation] = useLocation(); const [loading, setLoading] = useState(false); const [agree, setAgree] = useState(false); const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [error, setError] = useState(''); const [message, setMessage] = useState('');
-  const submit = async (event: FormEvent) => { event.preventDefault(); setLoading(true); setError(''); setMessage(''); try { const result = await signUp(name, email, password); if (result.session) setLocation('/app'); else setMessage('가입이 완료되었습니다. 이메일 인증을 마친 뒤 로그인해 주세요.'); } catch (reason) { setError(reason instanceof Error ? reason.message : '회원가입에 실패했습니다.'); } finally { setLoading(false); } };
+  const [, setLocation] = useLocation(); const [loading, setLoading] = useState(false); const [agree, setAgree] = useState(false); const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [department, setDepartment] = useState<Department>('dohongjonwi'); const [error, setError] = useState(''); const [message, setMessage] = useState('');
+  const submit = async (event: FormEvent) => { event.preventDefault(); setLoading(true); setError(''); setMessage(''); try { const result = await signUp(name, email, password, department); if (result.session) setLocation('/app'); else setMessage('가입이 완료되었습니다. 이메일 인증을 마친 뒤 로그인해 주세요.'); } catch (reason) { setError(reason instanceof Error ? reason.message : '회원가입에 실패했습니다.'); } finally { setLoading(false); } };
   return <AuthFrame title="새 계정 만들기" subtitle="회원위원회의 소식을 가장 먼저 확인하세요."><form onSubmit={submit} className="grid gap-4">
     <Field label="이름"><div className="relative"><UserRound size={17} className="absolute left-3.5 top-3.5 text-muted-foreground" /><Input required value={name} onChange={(event) => setName(event.target.value)} placeholder="표시할 이름" className="pl-10" data-testid="input-signup-name" /></div></Field>
     <Field label="이메일"><div className="relative"><Mail size={17} className="absolute left-3.5 top-3.5 text-muted-foreground" /><Input autoComplete="email" required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" className="pl-10" data-testid="input-signup-email" /></div></Field>
     <Field label="비밀번호" hint="영문, 숫자를 포함해 6자 이상"><div className="relative"><LockKeyhole size={17} className="absolute left-3.5 top-3.5 text-muted-foreground" /><Input autoComplete="new-password" required minLength={6} type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="안전한 비밀번호" className="pl-10" data-testid="input-signup-password" /></div></Field>
+    <Field label="부서" hint="가입 후에는 같은 부서 대화방에 참여할 수 있습니다."><select required value={department} onChange={(event) => setDepartment(event.target.value as Department)} className="flex h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition focus:ring-2 focus:ring-ring" data-testid="select-signup-department"><option value="dohongjonwi">{DEPARTMENT_LABELS.dohongjonwi}</option><option value="hongjukwi">{DEPARTMENT_LABELS.hongjukwi}</option></select></Field>
     {error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</p>}
     {message && <p role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</p>}
     <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={agree} onChange={(event) => setAgree(event.target.checked)} className="h-4 w-4 accent-[hsl(var(--primary))]" data-testid="input-signup-agree" /><Check size={13} className="pointer-events-none -ml-6 text-primary opacity-0" /> 운영실 이용약관과 개인정보 처리방침에 동의합니다.</label>
