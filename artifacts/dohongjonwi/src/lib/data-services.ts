@@ -2,10 +2,16 @@ import { supabase, getSupabaseError } from '@/lib/supabase';
 
 export type Role = 'member' | 'admin';
 export type MemberStatus = 'active' | 'suspended';
+export type Department = 'dohongjonwi' | 'hongjukwi';
+export const DEPARTMENT_LABELS: Record<Department, string> = {
+  dohongjonwi: '돼홍존위',
+  hongjukwi: '홍죽위',
+};
 export type Profile = {
   id: string;
   email: string;
   display_name: string;
+  department: Department;
   role: Role;
   coin_balance: number;
   created_at: string;
@@ -13,8 +19,10 @@ export type Profile = {
   status: MemberStatus | 'pending';
 };
 export type Announcement = { id: string; title: string; content: string; author_id: string; created_at: string; updated_at: string };
-export type ChatRoom = { id: string; name: string; description: string; created_at: string };
+export type ChatRoom = { id: string; name: string; description: string; department: Department | null; created_at: string };
 export type ChatMessage = { id: string; room_id: string; sender_id: string; sender_name?: string; content: string; created_at: string };
+export type DirectoryMember = { id: string; display_name: string; department: Department };
+export type DirectMessage = { id: string; sender_id: string; recipient_id: string; content: string; created_at: string };
 export type EmergencyMeeting = { id: string; title: string; description: string; created_by: string; status: 'scheduled' | 'live' | 'ended'; created_at: string; started_at: string | null; ended_at: string | null };
 export type AppNotification = { id: string; user_id: string; title: string; content: string; type: 'notice' | 'meeting' | 'system' | 'admin'; read_at: string | null; created_at: string };
 export type CoinTransaction = { id: string; target_user_id: string; previous_balance: number; amount_changed: number; new_balance: number; transaction_type: 'grant' | 'deduct'; reason: string; admin_id: string; created_at: string };
@@ -59,11 +67,11 @@ export async function signIn(email: string, password: string) {
   if (error) throw new Error(getSupabaseError(error, '이메일 또는 비밀번호를 확인해 주세요.'));
 }
 
-export async function signUp(displayName: string, email: string, password: string) {
+export async function signUp(displayName: string, email: string, password: string, department: Department) {
   const { data, error } = await supabase.auth.signUp({
     email: email.trim(),
     password,
-    options: { data: { display_name: displayName.trim() } },
+    options: { data: { display_name: displayName.trim(), department } },
   });
   if (error) throw new Error(getSupabaseError(error, '회원가입을 완료하지 못했습니다.'));
   return data;
@@ -76,7 +84,7 @@ export async function signOut() {
 
 export async function resetPassword(email: string) {
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-    redirectTo: `${window.location.origin}/login`,
+    redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}login`,
   });
   if (error) throw new Error(getSupabaseError(error, '비밀번호 재설정 메일을 보내지 못했습니다.'));
 }
@@ -143,6 +151,12 @@ export async function getRooms() {
   return unwrap(data as ChatRoom[] | null, error, '채팅방을 불러오지 못했습니다.') ?? [];
 }
 
+export async function getMemberDirectory() {
+  await requireUser();
+  const { data, error } = await supabase.rpc('get_member_directory');
+  return unwrap(data as DirectoryMember[] | null, error, '회원 목록을 불러오지 못했습니다.') ?? [];
+}
+
 export async function getMessages(roomId: string) {
   await requireUser();
   const { data, error } = await supabase
@@ -162,6 +176,26 @@ export async function sendMessage(roomId: string, senderId: string, content: str
   if (user.id !== senderId) throw new Error('본인 계정으로만 메시지를 보낼 수 있습니다.');
   const { data, error } = await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: senderId, content }).select().single();
   return unwrap(data as ChatMessage | null, error, '메시지를 보내지 못했습니다.');
+}
+
+export async function getDirectMessages(recipientId: string) {
+  const user = await requireUser();
+  const { data, error } = await supabase
+    .from('direct_messages')
+    .select('id, sender_id, recipient_id, content, created_at')
+    .or(`and(sender_id.eq.${user.id},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${user.id})`)
+    .order('created_at', { ascending: true });
+  return unwrap(data as DirectMessage[] | null, error, 'DM 기록을 불러오지 못했습니다.') ?? [];
+}
+
+export async function sendDirectMessage(recipientId: string, content: string) {
+  const user = await requireUser();
+  const { data, error } = await supabase
+    .from('direct_messages')
+    .insert({ sender_id: user.id, recipient_id: recipientId, content })
+    .select()
+    .single();
+  return unwrap(data as DirectMessage | null, error, 'DM을 보내지 못했습니다.');
 }
 
 export async function getMeetings() {
@@ -249,7 +283,7 @@ export async function getCoinTransactions(targetUserId?: string) {
 }
 
 export function subscribeToTable(
-  name: 'chat_messages' | 'emergency_meetings' | 'notifications',
+  name: 'chat_messages' | 'direct_messages' | 'emergency_meetings' | 'notifications',
   callback: (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => void,
   filter?: string,
 ) {
