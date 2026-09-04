@@ -27,12 +27,22 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
   display_name text not null check (char_length(trim(display_name)) between 1 and 80),
+  department text not null default 'dohongjonwi' check (department in ('dohongjonwi', 'hongjukwi')),
   role public.app_role not null default 'member',
   status public.member_status not null default 'active',
   coin_balance integer not null default 0 check (coin_balance >= 0),
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.profiles add column if not exists department text;
+update public.profiles set department = 'dohongjonwi' where department is null;
+alter table public.profiles alter column department set default 'dohongjonwi';
+alter table public.profiles alter column department set not null;
+do $$ begin
+  alter table public.profiles add constraint profiles_department_check
+    check (department in ('dohongjonwi', 'hongjukwi'));
+exception when duplicate_object then null; end $$;
 
 create table if not exists public.announcements (
   id uuid primary key default gen_random_uuid(),
@@ -47,8 +57,15 @@ create table if not exists public.chat_rooms (
   id uuid primary key default gen_random_uuid(),
   name text not null check (char_length(trim(name)) between 1 and 80),
   description text not null default '' check (char_length(description) <= 500),
+  department text check (department is null or department in ('dohongjonwi', 'hongjukwi')),
   created_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.chat_rooms add column if not exists department text;
+do $$ begin
+  alter table public.chat_rooms add constraint chat_rooms_department_check
+    check (department is null or department in ('dohongjonwi', 'hongjukwi'));
+exception when duplicate_object then null; end $$;
 
 create table if not exists public.chat_messages (
   id uuid primary key default gen_random_uuid(),
@@ -56,6 +73,15 @@ create table if not exists public.chat_messages (
   sender_id uuid not null references public.profiles(id) on delete restrict,
   content text not null check (char_length(trim(content)) between 1 and 2000),
   created_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.direct_messages (
+  id uuid primary key default gen_random_uuid(),
+  sender_id uuid not null references public.profiles(id) on delete cascade,
+  recipient_id uuid not null references public.profiles(id) on delete cascade,
+  content text not null check (char_length(trim(content)) between 1 and 2000),
+  created_at timestamptz not null default timezone('utc', now()),
+  constraint direct_messages_different_users check (sender_id <> recipient_id)
 );
 
 create table if not exists public.emergency_meetings (
@@ -112,6 +138,10 @@ create table if not exists public.admin_logs (
 
 create index if not exists announcements_created_at_idx on public.announcements (created_at desc);
 create index if not exists chat_messages_room_created_at_idx on public.chat_messages (room_id, created_at);
+create index if not exists direct_messages_conversation_created_at_idx
+  on public.direct_messages (sender_id, recipient_id, created_at);
+create index if not exists direct_messages_recipient_created_at_idx
+  on public.direct_messages (recipient_id, sender_id, created_at);
 create index if not exists emergency_meetings_status_created_at_idx on public.emergency_meetings (status, created_at desc);
 create index if not exists notifications_user_created_at_idx on public.notifications (user_id, created_at desc);
 create index if not exists notifications_unread_idx on public.notifications (user_id, read_at) where read_at is null;
@@ -164,13 +194,20 @@ set search_path = public
 as $$
 declare
   requested_name text;
+  requested_department text;
 begin
   requested_name := nullif(trim(new.raw_user_meta_data ->> 'display_name'), '');
-  insert into public.profiles (id, email, display_name)
+  requested_department := case
+    when new.raw_user_meta_data ->> 'department' in ('dohongjonwi', 'hongjukwi')
+      then new.raw_user_meta_data ->> 'department'
+    else 'dohongjonwi'
+  end;
+  insert into public.profiles (id, email, display_name, department)
   values (
     new.id,
     coalesce(new.email, ''),
-    coalesce(requested_name, split_part(coalesce(new.email, '회원'), '@', 1), '회원')
+    coalesce(requested_name, split_part(coalesce(new.email, '회원'), '@', 1), '회원'),
+    requested_department
   )
   on conflict (id) do update
     set email = excluded.email,
@@ -178,6 +215,22 @@ begin
   return new;
 end;
 $$;
+
+create or replace function public.get_member_directory()
+returns table (id uuid, display_name text, department text)
+language sql
+security definer
+set search_path = public
+as $$
+  select p.id, p.display_name, p.department
+  from public.profiles p
+  where p.status = 'active'::public.member_status
+    and p.id <> auth.uid()
+  order by p.display_name asc;
+$$;
+
+revoke all on function public.get_member_directory() from public;
+grant execute on function public.get_member_directory() to authenticated;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -468,14 +521,23 @@ create trigger meetings_log_admin_change after insert or update on public.emerge
 for each row execute function public.log_meeting_admin_change();
 
 -- Seed one shared chat room. This is structural seed data, not mock activity.
-insert into public.chat_rooms (name, description)
-select '전체 대화방', '모든 회원이 함께 이야기하는 공간입니다.'
-where not exists (select 1 from public.chat_rooms);
+insert into public.chat_rooms (name, description, department)
+select '전체 대화방', '모든 회원이 함께 이야기하는 공간입니다.', null
+where not exists (select 1 from public.chat_rooms where name = '전체 대화방');
+
+insert into public.chat_rooms (name, description, department)
+select '돼홍존위 대화방', '돼홍존위 회원만 참여할 수 있는 부서 대화방입니다.', 'dohongjonwi'
+where not exists (select 1 from public.chat_rooms where name = '돼홍존위 대화방');
+
+insert into public.chat_rooms (name, description, department)
+select '홍죽위 대화방', '홍죽위 회원만 참여할 수 있는 부서 대화방입니다.', 'hongjukwi'
+where not exists (select 1 from public.chat_rooms where name = '홍죽위 대화방');
 
 alter table public.profiles enable row level security;
 alter table public.announcements enable row level security;
 alter table public.chat_rooms enable row level security;
 alter table public.chat_messages enable row level security;
+alter table public.direct_messages enable row level security;
 alter table public.emergency_meetings enable row level security;
 alter table public.notifications enable row level security;
 alter table public.coin_transactions enable row level security;
@@ -508,7 +570,10 @@ using (public.is_admin());
 
 drop policy if exists "chat_rooms_active_members_read" on public.chat_rooms;
 create policy "chat_rooms_active_members_read" on public.chat_rooms for select to authenticated
-using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.status = 'active'::public.member_status));
+using (
+  department is null
+  or department = (select p.department from public.profiles p where p.id = auth.uid() and p.status = 'active'::public.member_status)
+);
 
 drop policy if exists "chat_rooms_admin_manage" on public.chat_rooms;
 create policy "chat_rooms_admin_manage" on public.chat_rooms for all to authenticated
@@ -516,18 +581,53 @@ using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "chat_messages_active_members_read" on public.chat_messages;
 create policy "chat_messages_active_members_read" on public.chat_messages for select to authenticated
-using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.status = 'active'::public.member_status));
+using (
+  exists (
+    select 1
+    from public.chat_rooms r
+    join public.profiles p on p.id = auth.uid()
+    where r.id = chat_messages.room_id
+      and p.status = 'active'::public.member_status
+      and (r.department is null or r.department = p.department)
+  )
+);
 
 drop policy if exists "chat_messages_self_insert" on public.chat_messages;
 create policy "chat_messages_self_insert" on public.chat_messages for insert to authenticated
 with check (
   sender_id = auth.uid()
-  and exists (select 1 from public.profiles p where p.id = auth.uid() and p.status = 'active'::public.member_status)
+  and exists (
+    select 1
+    from public.chat_rooms r
+    join public.profiles p on p.id = auth.uid()
+    where r.id = chat_messages.room_id
+      and p.status = 'active'::public.member_status
+      and (r.department is null or r.department = p.department)
+  )
 );
 
 drop policy if exists "chat_messages_admin_delete" on public.chat_messages;
 create policy "chat_messages_admin_delete" on public.chat_messages for delete to authenticated
 using (public.is_admin());
+
+drop policy if exists "direct_messages_participants_read" on public.direct_messages;
+create policy "direct_messages_participants_read" on public.direct_messages for select to authenticated
+using (sender_id = auth.uid() or recipient_id = auth.uid());
+
+drop policy if exists "direct_messages_sender_insert" on public.direct_messages;
+create policy "direct_messages_sender_insert" on public.direct_messages for insert to authenticated
+with check (
+  sender_id = auth.uid()
+  and sender_id <> recipient_id
+  and exists (
+    select 1 from public.profiles sender
+    where sender.id = auth.uid() and sender.status = 'active'::public.member_status
+  )
+  and exists (
+    select 1 from public.profiles recipient
+    where recipient.id = direct_messages.recipient_id and recipient.status = 'active'::public.member_status
+  )
+);
 
 drop policy if exists "meetings_active_members_read" on public.emergency_meetings;
 create policy "meetings_active_members_read" on public.emergency_meetings for select to authenticated
@@ -581,4 +681,7 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 do $$ begin
   alter publication supabase_realtime add table public.notifications;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.direct_messages;
 exception when duplicate_object then null; end $$;
